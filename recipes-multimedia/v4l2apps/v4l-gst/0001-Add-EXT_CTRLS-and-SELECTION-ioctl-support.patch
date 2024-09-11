@@ -1,0 +1,81 @@
+From 5ee7f138d73aece39b6050beb19aefd615542199 Mon Sep 17 00:00:00 2001
+From: INAJIMA Daisuke <inajima@soum.co.jp>
+Date: Wed, 11 Sep 2024 19:26:28 +0900
+Subject: [PATCH 1/2] Add EXT_CTRLS and SELECTION ioctl support
+
+---
+ lib/libv4l-gst/gst-backend.c | 29 +++++++++++++++++++++++++++++
+ lib/libv4l-gst/libv4l-gst.c  |  6 ++++++
+ 2 files changed, 35 insertions(+)
+
+diff --git a/lib/libv4l-gst/gst-backend.c b/lib/libv4l-gst/gst-backend.c
+index 90ab493..c81dc08 100644
+--- a/lib/libv4l-gst/gst-backend.c
++++ b/lib/libv4l-gst/gst-backend.c
+@@ -1313,6 +1313,25 @@ get_ctrl_ioctl(struct v4l_gst_priv *dev_ops_priv, struct v4l2_control *ctrl)
+ 	return ret;
+ }
+ 
++int
++get_ext_ctrl_ioctl(struct v4l_gst_priv *dev_ops_priv, struct v4l2_ext_controls *ext_ctrls)
++{
++	struct gst_backend_priv *priv = dev_ops_priv->gst_priv;
++	unsigned int i;
++
++	for (i = 0; i < ext_ctrls->count; i++) {
++		struct v4l2_ext_control *ext_ctrl = &ext_ctrls->controls[i];
++		if (ext_ctrl->id == V4L2_CID_MIN_BUFFERS_FOR_CAPTURE) {
++			ext_ctrl->value = priv->cap_min_buffers;
++			continue;
++		}
++		errno = EINVAL;
++		return -1;
++	}
++
++	return 0;
++}
++
+ static gboolean
+ is_supported_memory_io(enum v4l2_memory memory)
+ {
+@@ -2917,3 +2936,13 @@ int expbuf_ioctl(struct v4l_gst_priv *dev_ops_priv,
+ 	}
+ 	return -1;
+ }
++
++int g_selection_ioctl(struct v4l_gst_priv *dev_ops_priv, struct v4l2_selection *selection) {
++	struct gst_backend_priv *priv = dev_ops_priv->gst_priv;
++
++	selection->r.top = selection->r.left = 0;
++	selection->r.width = priv->cap_pix_fmt.width;
++	selection->r.height = priv->cap_pix_fmt.height;
++
++	return 0;
++}
+diff --git a/lib/libv4l-gst/libv4l-gst.c b/lib/libv4l-gst/libv4l-gst.c
+index 8426a9a..d5813b7 100644
+--- a/lib/libv4l-gst/libv4l-gst.c
++++ b/lib/libv4l-gst/libv4l-gst.c
+@@ -127,6 +127,9 @@ static int plugin_ioctl(void *dev_ops_priv, int fd,
+ 	case VIDIOC_G_CTRL:
+ 		ret = get_ctrl_ioctl(priv, arg);
+ 		break;
++	case VIDIOC_G_EXT_CTRLS:
++		ret = get_ext_ctrl_ioctl(priv, arg);
++		break;
+ 	case VIDIOC_QBUF:
+ 		ret = qbuf_ioctl(priv, arg);
+ 		break;
+@@ -157,6 +160,9 @@ static int plugin_ioctl(void *dev_ops_priv, int fd,
+ 	case VIDIOC_ENUM_FRAMESIZES :
+ 		ret = enum_framesizes_ioctl(priv, arg);
+ 		break;
++	case VIDIOC_G_SELECTION :
++		ret = g_selection_ioctl(priv, arg);
++		break;
+ 	default:
+ 		perror("unknown ioctl");
+ 		errno = ENOTTY;
+-- 
+2.46.0
+

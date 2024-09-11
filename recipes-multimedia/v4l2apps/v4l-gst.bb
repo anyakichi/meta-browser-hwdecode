@@ -7,10 +7,11 @@ SECTION = "libs"
 DEPENDS = "gstreamer1.0 v4l-utils gstreamer1.0-plugins-base"
 
 SRC_URI = "git://github.com/igel-oss/v4l-gst.git;protocol=https;branch=master \
+	   file://0001-Add-EXT_CTRLS-and-SELECTION-ioctl-support.patch \
+	   file://0002-temporary-workaround-for-buffer-pool.patch \
 	   file://libv4l-gst.conf \
           "
-
-SRCREV = "6b28cc35a229a73791c4deb34021caed20043be0"
+SRCREV = "13094e8b82c311eb6b943bb43a90d57f8c8fcad3"
 
 S = "${WORKDIR}/git"
 

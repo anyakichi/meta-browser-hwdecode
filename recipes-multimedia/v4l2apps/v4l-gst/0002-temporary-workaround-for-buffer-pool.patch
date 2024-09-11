@@ -1,0 +1,31 @@
+From 48b287bc6a5077b533f65b1e81a2a9a96aba8a2a Mon Sep 17 00:00:00 2001
+From: INAJIMA Daisuke <inajima@soum.co.jp>
+Date: Wed, 11 Sep 2024 19:32:56 +0900
+Subject: [PATCH 2/2] temporary workaround for buffer pool
+
+---
+ lib/libv4l-gst/gst-backend.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/lib/libv4l-gst/gst-backend.c b/lib/libv4l-gst/gst-backend.c
+index c81dc08..8684fc4 100644
+--- a/lib/libv4l-gst/gst-backend.c
++++ b/lib/libv4l-gst/gst-backend.c
+@@ -710,12 +710,12 @@ pad_probe_query(GstPad *pad, GstPadProbeInfo *probe_info, gpointer user_data)
+ 		wait_for_cap_reqbuf_invocation(priv);
+ 
+ 		set_buffer_pool_params(priv->sink_pool, caps, info.size,
+-				       priv->cap_buffers_num,
++				       priv->cap_buffers_num - 4, /* XXX */
+ 				       priv->cap_buffers_num);
+ 
+ 		gst_query_add_allocation_pool(query, priv->sink_pool,
+ 					      info.size,
+-					      priv->cap_buffers_num,
++					      priv->cap_buffers_num - 4, /* XXX */
+ 					      priv->cap_buffers_num);
+ 	}
+ 
+-- 
+2.46.0
+
