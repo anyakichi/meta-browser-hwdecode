@@ -10,12 +10,13 @@ SRC_URI = "git://github.com/igel-oss/v4l-gst.git;protocol=https;branch=master \
 	   file://0001-Add-EXT_CTRLS-and-SELECTION-ioctl-support.patch \
 	   file://0002-temporary-workaround-for-buffer-pool.patch \
 	   file://libv4l-gst.conf \
+	   file://v4l-gst.sh \
           "
 SRCREV = "13094e8b82c311eb6b943bb43a90d57f8c8fcad3"
 
 S = "${WORKDIR}/git"
 
-inherit autotools pkgconfig
+inherit autotools pkgconfig update-rc.d
 
 EXTRA_OECONF += "--enable-chromium-compatibility"
 
@@ -23,7 +24,11 @@ do_install_append () {
 	install -d ${D}/usr/local/include
 	install -m 0644 ${S}/lib/include/libv4l-gst-bufferpool.h ${D}/usr/local/include
 	install -m 0644 -D ${WORKDIR}/libv4l-gst.conf ${D}/etc/xdg/libv4l-gst.conf
+	install -d ${D}${sysconfdir}/init.d
+	install -m 0755 -D ${WORKDIR}/v4l-gst.sh ${D}${sysconfdir}/init.d/v4l-gst
 }
+
+INITSCRIPT_NAME = "v4l-gst"
 
 FILES_${PN}-dbg += "\
 	${libdir}/libv4l/plugins/.debug \
@@ -38,6 +43,7 @@ FILES_${PN}-headers = "/usr/local/include"
 
 FILES_${PN} += "\
 	${libdir}/libv4l/plugins/*.so \
+	${sysconfdir}/init.d \
 "
 
 PACKAGES += "\
