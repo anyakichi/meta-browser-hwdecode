@@ -1,0 +1,20 @@
+diff --git a/media/gpu/v4l2/v4l2_device.cc b/media/gpu/v4l2/v4l2_device.cc
+index d206b18a7..b0c3ca217 100644
+--- a/media/gpu/v4l2/v4l2_device.cc
++++ b/media/gpu/v4l2/v4l2_device.cc
+@@ -1185,6 +1185,15 @@ size_t V4L2Queue::AllocateBuffers(size_t count,
+ 
+   memory_ = memory;
+ 
++  // v4l-gst: re-read format for initizing a bytesperline.  v4l-gst
++  // could not get size and bytesperline parameter until buffer (ioctl
++  // VIDIOC_REQBUFS) had been obtained.
++  format = GetFormat().first;
++  if (!format) {
++    VQLOGF(1) << "Cannot get format.";
++    return 0;
++  }
++
+   free_buffers_ = new V4L2BuffersList();
+ 
+   // Now query all buffer information.

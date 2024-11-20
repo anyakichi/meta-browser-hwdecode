@@ -1,0 +1,81 @@
+diff --git a/media/gpu/v4l2/v4l2_device.cc b/media/gpu/v4l2/v4l2_device.cc
+index b0c3ca217..33706ceb5 100644
+--- a/media/gpu/v4l2/v4l2_device.cc
++++ b/media/gpu/v4l2/v4l2_device.cc
+@@ -299,7 +299,27 @@ size_t V4L2Buffer::GetMemoryUsage() const {
+ }
+ 
+ scoped_refptr<VideoFrame> V4L2Buffer::CreateVideoFrame() {
+-  auto layout = V4L2Device::V4L2FormatToVideoFrameLayout(format_);
++  // To get offset value that is used by eglCreateImageKHR, call custom
++  // ioctl VIDIOC_EXPBUF with type V4L2_BUF_TYPE_PRIVATE.
++  std::vector<int> offsets;
++  const v4l2_pix_format_mplane& pix_mp = format_.fmt.pix_mp;
++  const size_t num_buffers = pix_mp.num_planes;
++  for (size_t i = 0; i < num_buffers; ++i) {
++    struct v4l2_exportbuffer expbuf = {0};
++    expbuf.type = V4L2_BUF_TYPE_PRIVATE;
++    expbuf.index = v4l2_buffer_.index;
++    expbuf.plane = i;
++    expbuf.flags = O_CLOEXEC;
++    if (device_->Ioctl(VIDIOC_EXPBUF, &expbuf) != 0) {
++      offsets.emplace_back(0);
++      continue;
++    }
++    offsets.emplace_back(expbuf.reserved[0]);
++  }
++
++  // since ioctl func could not be called in
++  // V4L2FormatToVideoFrameLayout, pass offsets as argument.
++  auto layout = V4L2Device::V4L2FormatToVideoFrameLayout(format_, offsets);
+   if (!layout) {
+     VLOGF(1) << "Cannot create frame layout for V4L2 buffers";
+     return nullptr;
+@@ -2001,6 +2021,18 @@ gfx::Size V4L2Device::AllocatedSizeFromV4L2Format(
+ // static
+ absl::optional<VideoFrameLayout> V4L2Device::V4L2FormatToVideoFrameLayout(
+     const struct v4l2_format& format) {
++  std::vector<int> offsets;
++  const v4l2_pix_format_mplane& pix_mp = format.fmt.pix_mp;
++  const size_t num_buffers = pix_mp.num_planes;
++  for (size_t i = 0; i < num_buffers; ++i) {
++    offsets.emplace_back(0u);
++  }
++  return V4L2FormatToVideoFrameLayout(format, offsets);
++}
++
++// static
++absl::optional<VideoFrameLayout> V4L2Device::V4L2FormatToVideoFrameLayout(
++    const struct v4l2_format& format, std::vector<int> offsets) {
+   if (!V4L2_TYPE_IS_MULTIPLANAR(format.type)) {
+     VLOGF(1) << "v4l2_buf_type is not multiplanar: " << std::hex << "0x"
+              << format.type;
+@@ -2032,10 +2064,12 @@ absl::optional<VideoFrameLayout> V4L2Device::V4L2FormatToVideoFrameLayout(
+   // Reserve capacity in advance to prevent unnecessary vector reallocation.
+   std::vector<ColorPlaneLayout> planes;
+   planes.reserve(num_color_planes);
++
+   for (size_t i = 0; i < num_buffers; ++i) {
+     const v4l2_plane_pix_format& plane_format = pix_mp.plane_fmt[i];
+-    planes.emplace_back(static_cast<int32_t>(plane_format.bytesperline), 0u,
+-                        plane_format.sizeimage);
++    int off = (offsets.size() == num_buffers) ? offsets[i] : 0;
++    planes.emplace_back(static_cast<int32_t>(plane_format.bytesperline), off,
++			plane_format.sizeimage);
+   }
+   // For the case that #color planes > #buffers, it fills stride of color
+   // plane which does not map to buffer.
+diff --git a/media/gpu/v4l2/v4l2_device.h b/media/gpu/v4l2/v4l2_device.h
+index 8ee721ce5..6b3505d22 100644
+--- a/media/gpu/v4l2/v4l2_device.h
++++ b/media/gpu/v4l2/v4l2_device.h
+@@ -672,6 +672,9 @@ class MEDIA_GPU_EXPORT V4L2Device
+   static absl::optional<VideoFrameLayout> V4L2FormatToVideoFrameLayout(
+       const struct v4l2_format& format);
+ 
++  static absl::optional<VideoFrameLayout> V4L2FormatToVideoFrameLayout(
++      const struct v4l2_format& format, std::vector<int> offsets);
++
+   // Returns number of planes of |pix_fmt|.
+   static size_t GetNumPlanesOfV4L2PixFmt(uint32_t pix_fmt);
+ 

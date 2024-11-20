@@ -9,6 +9,7 @@ DEPENDS = "gstreamer1.0 v4l-utils gstreamer1.0-plugins-base"
 SRC_URI = "git://github.com/igel-oss/v4l-gst.git;protocol=https;branch=master \
 	   file://0001-Add-EXT_CTRLS-and-SELECTION-ioctl-support.patch \
 	   file://0002-temporary-workaround-for-buffer-pool.patch \
+           file://0001-expbuf-multple-plane-and-offset.patch \
 	   file://libv4l-gst.conf \
 	   file://v4l-gst.sh \
           "

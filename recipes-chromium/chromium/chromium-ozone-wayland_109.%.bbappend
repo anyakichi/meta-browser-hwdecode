@@ -17,6 +17,8 @@ SRC_URI_append = " file://0001-media-gpu-v4l2-Support-V4L2-VDA-with-libv4l2-on-L
                    file://0015-media-Support-HEVC-in-V4L2-VDA.patch \
                    file://0016-media-gpu-chromeos-Define-new-formats-for-old-kernel.patch \
                    file://0017-media-Support-AV1-in-V4L2-VDA.patch \
+                   file://0001-v4l-gst-correct-bytesperline-and-size.patch \
+                   file://0002-v4l-gst-correct-offset.patch \
 		 "
 
 
